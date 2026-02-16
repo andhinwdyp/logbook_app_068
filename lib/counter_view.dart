@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'counter_controller.dart';
+import 'history_widget.dart';
 
 class CounterView extends StatefulWidget {
   const CounterView({super.key});
@@ -11,84 +12,223 @@ class CounterView extends StatefulWidget {
 class _CounterViewState extends State<CounterView> {
   final CounterController _controller = CounterController();
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("LogBook: Task 2 (History)"),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Tambahan tombol Reset kecil di pojok kanan atas
+  void _confirmReset() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("dzikir akan di reset"),
+        content: const Text("yakin menghapus dzikir?"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => setState(() => _controller.reset()),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("tidak"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF8C8DC),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() => _controller.reset());
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("DZIKIR BERHASIL DI-RESET!"),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Text("ya"),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0), // Biar gak mepet pinggir
-        child: Column(
-          children: [
-            // --- BAGIAN ATAS (Counter & Slider) ---
-            const Text('Total Hitungan:', style: TextStyle(fontSize: 18)),
-            Text(
-              '${_controller.value}',
-              style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            
-            const Text("Atur Langkah (Step):"),
-            Slider(
-              min: 1, max: 10, divisions: 9,
-              label: _controller.step.toString(),
-              value: _controller.step.toDouble(),
-              onChanged: (v) => setState(() => _controller.setStep(v.toInt())),
-            ),
-            
-            const Divider(thickness: 2, height: 40), // Garis pembatas
+    );
+  }
 
-            // --- BAGIAN BAWAH (TASK 2: HISTORY LIST) ---
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text("Riwayat Aktivitas (Maks 5):", 
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF6E5),
+      appBar: AppBar(
+        title: const Text(
+          "DZIKIR COUNTER",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: const Color(0xFFFFF6E5),
+        foregroundColor: const Color(0xFF4A4A4A),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline,
+                color: Color(0xFF757575)),
+            onPressed: _confirmReset,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+
+          // DISPLAY UTAMA
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(vertical: 30),
+            decoration: BoxDecoration(
+  color: const Color(0xFFEAF6F1),
+  borderRadius: BorderRadius.circular(25),
+),
+
+            child: Column(
+              children: [
+                const Text(
+                  "TOTAL DZIKIR",
+                  style: TextStyle(
+                    color: Color(0xFF4A4A4A),
+                    letterSpacing: 2,
+                  ),
+                ),
+                Text(
+                  '${_controller.value}',
+                  style: const TextStyle(
+                    fontSize: 72,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4A4A4A),
+                  ),
+                ),
+              ],
             ),
-            
-            // PENTING: Gunakan Expanded agar ListView muncul
-            Expanded(
-              child: ListView.builder(
-                itemCount: _controller.history.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    elevation: 2, // Efek bayangan dikit
-                    margin: const EdgeInsets.symmetric(vertical: 5),
-                    child: ListTile(
-                      leading: const Icon(Icons.history, color: Colors.blue),
-                      title: Text(_controller.history[index]),
-                    ),
-                  );
+          ),
+
+          Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 20),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "PILIH STEP",
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF4A4A4A),
+        ),
+      ),
+      const SizedBox(height: 5),
+      Row(
+        children: [
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: const Color(0xFFB8E0D2),
+                inactiveTrackColor: const Color(0xFFE0E0E0),
+                thumbColor: const Color(0xFFF8C8DC),
+                overlayColor: const Color(0xFFF8C8DC).withValues(alpha: 0.2),
+              ),
+              child: Slider(
+                min: 1,
+                max: 100,
+                divisions: 99,
+                value: _controller.step.toDouble(),
+                label: _controller.step.toString(),
+                onChanged: (value) {
+                  setState(() {
+                    _controller.setStep(value.toInt());
+                  });
                 },
               ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Tombol Kurang
-          FloatingActionButton(
-            heroTag: "btnDec", // Wajib beda tag kalau ada 2 FAB
-            onPressed: () => setState(() => _controller.decrement()),
-            backgroundColor: Colors.red[100],
-            child: const Icon(Icons.remove, color: Colors.red),
           ),
+          Container(
+            width: 45,
+            alignment: Alignment.center,
+            child: Text(
+              _controller.step.toString(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF4A4A4A),
+              ),
+            ),
+          )
+        ],
+      ),
+    ],
+  ),
+),
+
+
           const SizedBox(height: 10),
-          // Tombol Tambah
-          FloatingActionButton(
-            heroTag: "btnInc",
-            onPressed: () => setState(() => _controller.increment()),
-            child: const Icon(Icons.add),
+
+          // HISTORY
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("HISTORY",
+                      style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _controller.history.length,
+                      itemBuilder: (context, index) {
+                        return HistoryTile(
+                            log: _controller.history[index]);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // BUTTON BAWAH
+          Container(
+            padding: const EdgeInsets.all(20),
+            color: Colors.white,
+            child: Row(
+              children: [
+
+                // KURANG
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF8C8DC),
+                      foregroundColor: const Color(0xFF4A4A4A),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    onPressed: () =>
+                        setState(() => _controller.decrement()),
+                    icon: const Icon(Icons.remove),
+                    label: const Text("KURANG"),
+                  ),
+                ),
+
+                const SizedBox(width: 15),
+
+                // TAMBAH
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFB8E0D2),
+                      foregroundColor: const Color(0xFF4A4A4A),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    onPressed: () =>
+                        setState(() => _controller.increment()),
+                    icon: const Icon(Icons.add),
+                    label: const Text("TAMBAH"),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
