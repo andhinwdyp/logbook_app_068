@@ -14,28 +14,36 @@ class _LoginViewState extends State<LoginView> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
 
+  bool _isObscured = true;
+
   void _handleLogin() {
     String user = _userController.text;
     String pass = _passController.text;
 
-    // Tanya ke Controller: "Apakah data ini benar?"
+    if (user.isEmpty || pass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Username dan Password tidak boleh kosong!"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     bool isSuccess = _controller.login(user, pass);
 
     if (isSuccess) {
-      // Jika benar, pindah ke CounterView dan kirim data nama (user) ke sana
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => CounterView(username: user), // Kirim data nama ke CounterView
+          builder: (context) => CounterView(username: user),
         ),
       );
     } else {
-      // Jika salah, munculkan pesan error
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Login Gagal! Coba: admin / 123"),
-          backgroundColor: Color(0xFFF8C8DC),
-          behavior: SnackBarBehavior.floating,
+          content: Text("Username atau Password Salah!"),
+          backgroundColor: Colors.redAccent,
         ),
       );
     }
@@ -51,11 +59,10 @@ class _LoginViewState extends State<LoginView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Ikon Gembok
               Container(
                 padding: const EdgeInsets.all(30),
                 decoration: const BoxDecoration(
-                  color: Color(0xFFEAF6F1),
+                  color: Color(0xFFEAF6F1), 
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.lock_outline, size: 60, color: Color(0xFFB8E0D2)),
@@ -80,29 +87,42 @@ class _LoginViewState extends State<LoginView> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                   filled: true,
                   fillColor: Colors.white,
+                  prefixIcon: const Icon(Icons.person_outline),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // Input Password
+              // Input Password dengan Toggle Visibility
               TextField(
                 controller: _passController,
-                obscureText: true,
+                obscureText: _isObscured,
                 decoration: InputDecoration(
                   labelText: "Password",
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                   filled: true,
                   fillColor: Colors.white,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  // Tombol untuk toggle visibility password
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isObscured ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isObscured = !_isObscured; // Toggle state
+                      });
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 30),
 
-              // Tombol Masuk
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8E0D2),
+                    backgroundColor: const Color(0xFFB8E0D2), 
                     foregroundColor: const Color(0xFF4A4A4A),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
