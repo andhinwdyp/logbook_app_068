@@ -36,7 +36,7 @@ class HistoryTile extends StatelessWidget {
           log,
           style: const TextStyle(
             color: Color(0xFF4A4A4A),
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
