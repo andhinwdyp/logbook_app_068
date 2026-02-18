@@ -20,13 +20,24 @@ class _CounterViewState extends State<CounterView> {
   static const _pinkColor = Color(0xFFF8C8DC);
   static const _greenColor = Color(0xFFB8E0D2);
 
-  // --- Dialog Konfirmasi Reset ---
+  // --- [BARU] FUNGSI LOAD DATA SAAT APLIKASI DIBUKA ---
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await _controller.loadData();
+    setState(() {});
+  }
+
   void _confirmReset() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Reset Data"),
-        content: const Text("Apakah Anda yakin ingin menghapus semua data?"),
+        content: const Text("Yakin ingin menghapus semua data?"),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
         ),
@@ -56,7 +67,6 @@ class _CounterViewState extends State<CounterView> {
     );
   }
 
-  // --- Dialog Konfirmasi Logout ---
   void _handleLogout() {
     showDialog(
       context: context,
@@ -67,16 +77,15 @@ class _CounterViewState extends State<CounterView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("TIdak, Batal", style: TextStyle(color: Colors.grey)),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFB8E0D2),
+              backgroundColor: const Color(0xFFB8E0D2), 
               elevation: 0,
             ),
             onPressed: () {
-              Navigator.pop(context);
-
+              Navigator.pop(context); 
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginView()),
@@ -106,7 +115,6 @@ class _CounterViewState extends State<CounterView> {
     );
   }
 
-  // --- AppBar dengan Judul Dinamis & Tombol Logout ---
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: Text(
@@ -118,22 +126,19 @@ class _CounterViewState extends State<CounterView> {
       backgroundColor: _bgColor,
       foregroundColor: _primaryTextColor,
       actions: [
-        // Tombol Reset (Sampah)
         IconButton(
           icon: const Icon(Icons.delete_outline),
           onPressed: _confirmReset,
           color: const Color(0xFF757575),
           tooltip: "Reset Data",
         ),
-        
-        // --- Tombol Logout (Pintu Keluar) ---
         IconButton(
           icon: const Icon(Icons.logout_rounded),
-          onPressed: _handleLogout,
-          color: const Color(0xFFFA8072),
+          onPressed: _handleLogout, 
+          color: const Color(0xFFFA8072), 
           tooltip: "Logout",
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 10), 
       ],
     );
   }
@@ -196,7 +201,7 @@ class _CounterViewState extends State<CounterView> {
                   ),
                   child: Slider(
                     min: 1,
-                    max: 10,
+                    max: 10, 
                     divisions: 9,
                     value: _controller.step.toDouble(),
                     label: _controller.step.toString(),
