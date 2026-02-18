@@ -70,7 +70,7 @@ class _LoginViewState extends State<LoginView> {
               const SizedBox(height: 30),
               
               const Text(
-                "LOGIN",
+                "Login",
                 style: TextStyle(
                   fontSize: 24, 
                   fontWeight: FontWeight.bold,
@@ -128,7 +128,7 @@ class _LoginViewState extends State<LoginView> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
                   onPressed: _handleLogin,
-                  child: const Text("MASUK", style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text("Masuk", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

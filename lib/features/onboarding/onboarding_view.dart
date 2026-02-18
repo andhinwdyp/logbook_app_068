@@ -29,7 +29,6 @@ class _OnboardingViewState extends State<OnboardingView> {
   },
 ];
 
-
   void _nextStep() {
     if (_step < 3) {
       setState(() {
@@ -55,25 +54,38 @@ class _OnboardingViewState extends State<OnboardingView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // --- ILUSTRASI / GAMBAR ---
-              Container(
-                padding: const EdgeInsets.all(40),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEAF6F1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
+              // --- GAMBAR ILUSTRASI ---
+              SizedBox(
+                height: 350,
+                child: Image.network(
                   _step == 1
-                      ? Icons.waving_hand
+                      ? "https://i.pinimg.com/736x/1f/80/de/1f80dea09a25b0b596368ebf5ca86fe4.jpg"
                       : _step == 2
-                          ? Icons.bar_chart
-                          : Icons.security,
-                  size: 80,
-                  color: const Color(0xFFB8E0D2),
+                          ? "https://i.pinimg.com/1200x/06/93/de/0693de4fddd8dbc6602760e311a44b38.jpg"
+                          : "https://i.pinimg.com/1200x/7f/ea/61/7fea618dd67514a0c256fbbe29740337.jpg",
+                  
+                  fit: BoxFit.contain,
+
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(color: Color(0xFFF8C8DC)),
+                    );
+                  },
+
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                        Text("Gagal memuat gambar", style: TextStyle(color: Colors.grey)),
+                      ],
+                    );
+                  },
                 ),
               ),
-              
-              const SizedBox(height: 40),
+
+              const SizedBox(height: 20),
 
               // --- TEKS JUDUL & DESKRIPSI ---
               Text(
@@ -83,6 +95,7 @@ class _OnboardingViewState extends State<OnboardingView> {
               const SizedBox(height: 10),
               Text(
                 data["title"]!,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -113,7 +126,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                   ),
                   onPressed: _nextStep,
                   child: Text(
-                    _step == 3 ? "MULAI SEKARANG" : "LANJUT",
+                    _step == 3 ? "Mulai" : "Lanjut",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),

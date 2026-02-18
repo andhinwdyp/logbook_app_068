@@ -10,10 +10,10 @@ class HistoryTile extends StatelessWidget {
     Color statusColor;
     IconData statusIcon;
 
-    if (log.contains("NAIK")) {
+    if (log.contains("Naik")) {
       statusColor = const Color(0xFFB8E0D2);
       statusIcon = Icons.trending_up;
-    } else if (log.contains("TURUN")) {
+    } else if (log.contains("Turun")) {
       statusColor = const Color(0xFFF8C8DC);
       statusIcon = Icons.trending_down;
     } else {

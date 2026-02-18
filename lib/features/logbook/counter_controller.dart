@@ -5,26 +5,27 @@ class CounterController {
   int _step = 1;
   List<String> _history = [];
 
+  String _activeUser = "guest";
+
   int get value => _counter;
   int get step => _step;
   List<String> get history => _history;
 
-  // --- FUNGSI BARU: MEMUAT DATA (LOAD) ---
-  Future<void> loadData() async {
+  Future<void> loadData(String username) async {
+    _activeUser = username;
     final prefs = await SharedPreferences.getInstance();
 
-    _counter = prefs.getInt('counter_key') ?? 0;
-    _step = prefs.getInt('step_key') ?? 1;
-    _history = prefs.getStringList('history_key') ?? [];
+    _counter = prefs.getInt('counter_$_activeUser') ?? 0;
+    _step = prefs.getInt('step_$_activeUser') ?? 1;
+    _history = prefs.getStringList('history_$_activeUser') ?? [];
   }
 
-  // --- FUNGSI BARU: MENYIMPAN DATA (SAVE) ---
   Future<void> _saveData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.setInt('counter_key', _counter);
-    await prefs.setInt('step_key', _step);
-    await prefs.setStringList('history_key', _history);
+    await prefs.setInt('counter_$_activeUser', _counter);
+    await prefs.setInt('step_$_activeUser', _step);
+    await prefs.setStringList('history_$_activeUser', _history);
   }
 
   void setStep(int step) {
@@ -34,14 +35,14 @@ class CounterController {
 
   void increment() {
     _counter += _step;
-    _addLog("NAIK $_step Angka");
+    _addLog("Naik +$_step");
     _saveData();
   }
 
   void decrement() {
     if (_counter >= _step) {
       _counter -= _step;
-      _addLog("TURUN $_step Angka");
+      _addLog("Turun -$_step");
       _saveData();
     }
   }
@@ -49,7 +50,7 @@ class CounterController {
   void reset() {
     _counter = 0;
     _history.clear();
-    _addLog("DATA DIRESET");
+    _addLog("Data direset");
     _saveData();
   }
 

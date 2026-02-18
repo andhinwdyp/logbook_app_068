@@ -20,7 +20,7 @@ class _CounterViewState extends State<CounterView> {
   static const _pinkColor = Color(0xFFF8C8DC);
   static const _greenColor = Color(0xFFB8E0D2);
 
-  // --- [BARU] FUNGSI LOAD DATA SAAT APLIKASI DIBUKA ---
+  // --- FUNGSI LOAD DATA SAAT APLIKASI DIBUKA ---
   @override
   void initState() {
     super.initState();
@@ -28,8 +28,18 @@ class _CounterViewState extends State<CounterView> {
   }
 
   Future<void> _loadInitialData() async {
-    await _controller.loadData();
+    await _controller.loadData(widget.username);
     setState(() {});
+  }
+
+  // --- FUNGSI SAPAAN WAKTU OTOMATIS ---
+  String _getGreeting() {
+    var hour = DateTime.now().hour;
+    if (hour < 4) return 'Selamat Malam';
+    if (hour < 11) return 'Selamat Pagi';
+    if (hour < 15) return 'Selamat Siang';
+    if (hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
   }
 
   void _confirmReset() {
@@ -55,7 +65,7 @@ class _CounterViewState extends State<CounterView> {
               setState(() => _controller.reset());
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text("DATA BERHASIL DIRESET"),
+                  content: Text("Data berhasil direset"),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -118,8 +128,8 @@ class _CounterViewState extends State<CounterView> {
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: Text(
-        "HALO, ${widget.username.toUpperCase()}", 
-        style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 16),
+        "${_getGreeting()}, ${widget.username}", 
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
       centerTitle: true,
       elevation: 0,
@@ -155,7 +165,7 @@ class _CounterViewState extends State<CounterView> {
       child: Column(
         children: [
           const Text(
-            "TOTAL HITUNG",
+            "Total Anda",
             style: TextStyle(
               letterSpacing: 2,
               color: _primaryTextColor,
@@ -182,7 +192,7 @@ class _CounterViewState extends State<CounterView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "PILIH STEP",
+            "Atur Step",
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: _primaryTextColor,
@@ -239,7 +249,7 @@ class _CounterViewState extends State<CounterView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "HISTORY",
+              "Riwayat Perubahan",
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 10),
@@ -278,7 +288,7 @@ class _CounterViewState extends State<CounterView> {
               onPressed: () =>
                   setState(() => _controller.decrement()),
               icon: const Icon(Icons.remove),
-              label: const Text("KURANG"),
+              label: const Text("Kurang"),
             ),
           ),
           const SizedBox(width: 15),
@@ -295,7 +305,7 @@ class _CounterViewState extends State<CounterView> {
               onPressed: () =>
                   setState(() => _controller.increment()),
               icon: const Icon(Icons.add),
-              label: const Text("TAMBAH"),
+              label: const Text("Tambah"),
             ),
           ),
         ],
