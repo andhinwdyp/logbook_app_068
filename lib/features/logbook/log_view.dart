@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'log_controller.dart';
 import 'models/log_model.dart';
@@ -416,7 +417,17 @@ class _LogViewState extends State<LogView> {
                                         ),
                                         subtitle: Padding(
                                           padding: const EdgeInsets.only(top: 4.0),
-                                          child: Text(log.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(log.date)), // Sesuai instruksi Homework
+                                                style: const TextStyle(fontSize: 11, color: Colors.blueGrey, fontWeight: FontWeight.w600),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(log.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+                                            ],
+                                          ),
                                         ),
                                         trailing: IconButton(
                                           icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
