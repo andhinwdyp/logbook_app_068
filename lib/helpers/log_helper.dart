@@ -1,4 +1,5 @@
 import 'dart:developer' as dev;
+import 'dart:io';
 import 'package:intl/intl.dart'; 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -15,13 +16,25 @@ class LogHelper {
     if (muteList.split(',').contains(source)) return;
 
     try {
-      String timestamp = DateFormat('HH:mm:ss').format(DateTime.now());
+      DateTime now = DateTime.now();
+      String dateStr = DateFormat('dd-MM-yyyy').format(now);
+      String timestamp = DateFormat('HH:mm:ss').format(now);
       String label = _getLabel(level);
       String color = _getColor(level);
+      
+      String logLine = '[$timestamp][$label][$source] -> $message';
 
-      dev.log(message, name: source, time: DateTime.now(), level: level * 100);
+      dev.log(message, name: source, time: now, level: level * 100);
       // ignore: avoid_print
-      print('$color[$timestamp][$label][$source] -> $message\x1B[0m');
+      print('$color$logLine\x1B[0m');
+
+      final directory = Directory('logs');
+      if (!await directory.exists()) {
+        await directory.create();
+      }
+      final file = File('logs/$dateStr.log');
+      await file.writeAsString('$logLine\n', mode: FileMode.append);
+
     } catch (e) {
       dev.log("Logging failed: $e", name: "SYSTEM", level: 1000);
     }
