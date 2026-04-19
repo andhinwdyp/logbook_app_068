@@ -9,9 +9,21 @@ class LogHelper {
     String source = "Unknown", 
     int level = 2,
   }) async {
-    final int configLevel = int.tryParse(dotenv.env['LOG_LEVEL'] ?? '2') ?? 2;
-    final String muteList = dotenv.env['LOG_MUTE'] ?? '';
+    // 1. Siapkan nilai default untuk konfigurasi log, sehingga jika terjadi error saat membaca .env, log tetap berjalan dengan nilai default yang sudah disiapkan.
+    int configLevel = 2;
+    String muteList = '';
 
+    // 2. Coba baca konfigurasi dari .env, jika gagal, akan dilempar ke catch dan menggunakan nilai default.
+    try {
+      // Baca konfigurasi dari .env, jika gagal, akan dilempar ke catch dan menggunakan nilai default.
+      configLevel = int.tryParse(dotenv.env['LOG_LEVEL'] ?? '2') ?? 2;
+      muteList = dotenv.env['LOG_MUTE'] ?? '';
+    } catch (e) {
+      // Jika terjadi error saat membaca .env, log error tersebut dan lanjutkan dengan nilai default.
+      // Log akan tetap berjalan dengan nilai default yang sudah disiapkan.
+    }
+    
+    // 3. Cek level log dan mute list, jika level log lebih tinggi dari konfigurasi atau sumber log ada di mute list, maka log tidak akan ditulis.
     if (level > configLevel) return;
     if (muteList.split(',').contains(source)) return;
 

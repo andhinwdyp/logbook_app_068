@@ -1,10 +1,13 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'log_controller.dart';
 import 'models/log_model.dart';
 import 'package:logbook_app_068/features/auth/login_view.dart';
 import 'package:logbook_app_068/services/mongo_service.dart';
 import 'package:logbook_app_068/helpers/log_helper.dart';
+import 'package:logbook_app_068/features/logbook/log_editor_page.dart';
+import 'package:logbook_app_068/features/vision/vision_view.dart';
 
 class LogView extends StatefulWidget {
   final String username;
@@ -17,12 +20,7 @@ class LogView extends StatefulWidget {
 
 class _LogViewState extends State<LogView> {
   final LogController _controller = LogController();
-
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-
-  String _selectedCategory = 'Pribadi'; 
-  final List<String> _categories = ['Pribadi', 'Reminder', 'Tugas', 'Urgent'];
+  late final Map<String, dynamic> currentUser;
 
   bool _isLoading = false;
 
@@ -34,41 +32,28 @@ class _LogViewState extends State<LogView> {
   @override
   void initState() {
     super.initState();
+    currentUser = {
+      'uid': widget.username,
+      'username': widget.username,
+      'teamId': 'Kelompok_Praktikum_01', 
+      'role': widget.username.toLowerCase() == 'admin' ? 'Ketua' : 'Anggota',
+    };
     Future.microtask(() => _initDatabase());
   }
 
   Future<void> _initDatabase() async {
     setState(() => _isLoading = true);
     try {
-      await LogHelper.writeLog("UI: Memulai inisialisasi database...", source: "log_view.dart");
-
       await MongoService().connect().timeout(
         const Duration(seconds: 15),
         onTimeout: () => throw Exception("Koneksi ke MongoDB Atlas gagal: Timeout"),
       );
-
-      await LogHelper.writeLog("UI: Koneksi MongoService BERHASIL.", source: "log_view.dart");
-
-      await _controller.loadData(widget.username);
+      await _controller.loadLogs(currentUser['teamId']);
     } catch (e) {
-      await LogHelper.writeLog("UI: Error - $e", source: "log_view.dart", level: 1);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Masalah: $e"), backgroundColor: Colors.red),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Masalah: $e"), backgroundColor: Colors.red));
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _contentController.dispose();
-    super.dispose();
   }
 
   String _getGreeting() {
@@ -82,147 +67,98 @@ class _LogViewState extends State<LogView> {
 
   Color _getCategoryColor(String category) {
     switch (category) {
-      case 'Tugas':
-        return Colors.blue.shade200;
-      case 'Reminder':
-        return Colors.orange.shade200;
-      case 'Urgent':
-        return Colors.red.shade200;
-      case 'Pribadi':
-      default:
-        return _greenColor;
+      case 'Tugas': return Colors.blue.shade200;
+      case 'Reminder': return Colors.orange.shade200;
+      case 'Urgent': return Colors.red.shade200;
+      case 'Pribadi': default: return _greenColor;
     }
   }
 
-  // --- DIALOG TAMBAH DATA ---
-  void _showAddLogDialog() {
-    _titleController.clear();
-    _contentController.clear();
-    _selectedCategory = 'Pribadi';
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: const Text("Tambah Catatan Baru"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(hintText: "Judul Catatan"),
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  items: _categories.map((String category) {
-                    return DropdownMenuItem(value: category, child: Text(category));
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setDialogState(() => _selectedCategory = newValue);
-                    }
-                  },  
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _contentController,
-                  decoration: const InputDecoration(hintText: "Isi Deskripsi"),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Batal", style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: _pinkColor, elevation: 0),
-                onPressed: () async {
-                  if (_titleController.text.isNotEmpty && _contentController.text.isNotEmpty) {
-                    Navigator.pop(context);
-                    await _controller.addLog(_titleController.text, _contentController.text, _selectedCategory);
-                  }
-                },
-                child: const Text("Simpan", style: TextStyle(color: _primaryTextColor, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        }
+  void _goToEditor({LogModel? log, int? index}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LogEditorPage(
+          log: log,
+          index: index,
+          controller: _controller,
+          currentUser: currentUser,
+        ),
       ),
     );
   }
 
-  // --- DIALOG EDIT DATA ---
-  void _showEditLogDialog(int index, LogModel log) {
-    _titleController.text = log.title;
-    _contentController.text = log.description;
-
-    if (_categories.contains(log.category)) {
-      _selectedCategory = log.category;
-    } else {
-      _selectedCategory = 'Pribadi'; 
-    }
-    
-    showDialog(
+  // --- [BARU] FUNGSI MODE BACA (READ-ONLY BOTTOM SHEET) ---
+  void _showLogDetail(LogModel log, Color catColor) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: const Text("Edit Catatan"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: _titleController),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  items: _categories.map((String category) {
-                    return DropdownMenuItem(value: category, child: Text(category));
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setDialogState(() => _selectedCategory = newValue);
-                    }
-                  },
-                ),
-                const SizedBox(height: 10),
-                TextField(controller: _contentController, maxLines: 3),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Batal", style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: _pinkColor, elevation: 0),
-                onPressed: () async {
-                  if (_titleController.text.isNotEmpty) {
-                    Navigator.pop(context);
-                    await _controller.updateLog(index, _titleController.text, _contentController.text, _selectedCategory);
-                  }
-                },
-                child: const Text("Update", style: TextStyle(color: _primaryTextColor, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        }
+      isScrollControlled: true, // Biar layarnya bisa memanjang kalau teksnya banyak
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6, // Buka sebesar 60% layar
+          maxChildSize: 0.9, // Maksimal mentok 90% layar
+          minChildSize: 0.3,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: Kategori & Tombol Close
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(color: catColor, borderRadius: BorderRadius.circular(15)),
+                        child: Text(log.category, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  // Judul & Info Penulis
+                  Text(log.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 5),
+                      Text("Oleh: ${log.authorId}", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 15),
+                      Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 5),
+                      Text(DateFormat('dd MMM yyyy').format(DateTime.parse(log.date)), style: TextStyle(color: Colors.grey.shade600)),
+                    ],
+                  ),
+                  const Divider(height: 30, thickness: 1),
+                  // Isi Catatan (Render Markdown Lengkap)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: MarkdownBody(
+                        data: log.description, // Teks yang panjang banget akan dirender rapi di sini
+                        selectable: true, // Biar tamunya bisa copy-paste teksnya kalau butuh
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
+  // --------------------------------------------------------
 
   void _handleLogout() {
     showDialog(
@@ -232,24 +168,14 @@ class _LogViewState extends State<LogView> {
         content: const Text("Apakah Anda yakin ingin keluar?"),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade300, elevation: 0,),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade300, elevation: 0),
             onPressed: () {
-              Navigator.pop(context); 
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginView()),
-                (route) => false, 
-              );
+              Navigator.pop(context);
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginView()), (route) => false);
             },
-            child: const Text(
-              "Ya, Keluar", 
-              style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold),
-            ),
+            child: const Text("Ya, Keluar", style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -261,118 +187,100 @@ class _LogViewState extends State<LogView> {
     return Scaffold(
       backgroundColor: _bgColor,
       appBar: AppBar(
-        title: Text(
-          "${_getGreeting()}, ${widget.username}",
+        title: Text("${_getGreeting()}, ${widget.username} [${currentUser['role']}]",
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         backgroundColor: _bgColor,
         foregroundColor: _primaryTextColor,
         elevation: 0,
-        centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFFFA8072)),
-            onPressed: _handleLogout,
+            icon: const Icon(Icons.camera_alt_rounded, color: Colors.blueAccent),
+            tooltip: 'Buka Smart-Patrol Vision',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const VisionView()),
+              );
+            },
           ),
+          IconButton(icon: const Icon(Icons.logout_rounded, color: Color(0xFFFA8072)), onPressed: _handleLogout),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: _pinkColor,
         elevation: 0,
-        highlightElevation: 0,
-        onPressed: _showAddLogDialog,
+        onPressed: () => _goToEditor(),
         icon: const Icon(Icons.add, color: _primaryTextColor),
-        label: const Text(
-          "Tambah Catatan", style: TextStyle(color: _primaryTextColor, fontWeight: FontWeight.bold)
-        ),
+        label: const Text("Tambah Catatan", style: TextStyle(color: _primaryTextColor, fontWeight: FontWeight.bold)),
       ),
-
       body: Column(
         children: [
-          // 1. KOTAK PENCARIAN
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
             child: TextField(
               onChanged: (value) => _controller.searchLog(value),
               decoration: InputDecoration(
                 hintText: "Cari judul catatan...",
-                hintStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFF8C8DC)),
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: Color(0xFFF8C8DC), width: 2),
-                ),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.grey.shade300, width: 1)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Color(0xFFF8C8DC), width: 2)),
               ),
             ),
           ),
-
-          // 2. TAMPILAN KONTEN (LOADING / EMPTY / LIST)
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(color: _pinkColor),
-                        SizedBox(height: 16),
-                        Text("Menghubungkan ke MongoDB Atlas...", style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
-                  )
+                ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(color: _pinkColor), SizedBox(height: 16), Text("Menghubungkan ke MongoDB Atlas...", style: TextStyle(color: Colors.grey))]))
                 : ValueListenableBuilder<List<LogModel>>(
-                    valueListenable: _controller.filteredLogsNotifier, 
+                    valueListenable: _controller.filteredLogsNotifier,
                     builder: (context, currentLogs, child) {
-
                       return RefreshIndicator(
                         color: _pinkColor,
                         onRefresh: _initDatabase,
                         child: currentLogs.isEmpty
                             ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
+                              physics: const AlwaysScrollableScrollPhysics(),
                                 children: [
                                   const SizedBox(height: 50),
                                   Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Image.network(
                                           "https://i.pinimg.com/1200x/51/47/cf/5147cfb30a10c2ba853db8d3094db2e4.jpg", 
                                           height: 200,
                                           errorBuilder: (context, error, stackTrace) => const Icon(
-                                            Icons.cloud_off_rounded, 
-                                            size: 100, 
-                                            color: Color(0xFFF8C8DC)
+                                            Icons.cloud_off_rounded, size: 100, color: Color(0xFFF8C8DC)
                                           ),
                                         ),
                                         const SizedBox(height: 20),
-                                        const Text(
-                                          "Belum ada catatan di Cloud.\nYuk, buat catatan pertamamu sekarang!", 
-                                          textAlign: TextAlign.center, 
-                                          style: TextStyle(color: Colors.grey, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500),
-                                        ),
+                                        const Text("Belum ada catatan di tim ini.\nYuk buat catatan pertama!", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
                                       ],
                                     ),
                                   )
                                 ],
                               )
-                            // State Isi
                             : ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.only(left: 15, right: 15, top: 5, bottom: 80),
                                 itemCount: currentLogs.length,
                                 itemBuilder: (context, index) {
                                   final log = currentLogs[index];
                                   final catColor = _getCategoryColor(log.category);
 
+                                  final bool isOwner = log.authorId == currentUser['uid'];
+
+                                  // Filter Privasi
+                                  if (!isOwner && !log.isPublic) return const SizedBox.shrink(); 
+
+                                  final bool canEdit = isOwner; 
+                                  final bool canDelete = isOwner;
+
                                   return Dismissible(
-                                    key: Key(log.id?.oid ?? log.date),
-                                    direction: DismissDirection.endToStart,
+                                    key: Key(log.id ?? log.date),
+                                    direction: canDelete ? DismissDirection.endToStart : DismissDirection.none,
                                     background: Container(
                                       margin: const EdgeInsets.symmetric(vertical: 8),
                                       decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(15)),
@@ -382,62 +290,52 @@ class _LogViewState extends State<LogView> {
                                     ),
                                     onDismissed: (direction) async {
                                       int realIndex = _controller.logsNotifier.value.indexOf(log);
-                                      if(realIndex != -1) {
-                                        await _controller.removeLog(realIndex); 
-                                      }
-                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Dihapus dari Cloud"), behavior: SnackBarBehavior.floating)); 
+                                      if(realIndex != -1) await _controller.removeLog(realIndex); 
                                     },
                                     child: Card(
                                       margin: const EdgeInsets.symmetric(vertical: 8),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        side: BorderSide(color: catColor.withValues(alpha:0.5), width: 1.5), 
-                                      ),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: catColor.withValues(alpha: 0.5), width: 1.5)),
                                       elevation: 2,
-                                      shadowColor: catColor.withValues(alpha:0.2),
-                                      color: Colors.white,
+                                      shadowColor: catColor.withValues(alpha: 0.2),
                                       child: ListTile(
+                                        // [BARU] Pemicu Layar Mode Baca Saat Kartu Ditekan
+                                        onTap: () => _showLogDetail(log, catColor), 
+                                        
                                         contentPadding: const EdgeInsets.all(15),
                                         leading: Container(
                                           padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(color: catColor.withValues(alpha:0.3), shape: BoxShape.circle),
-                                          child: Icon(Icons.cloud_done_outlined, color: catColor.withValues(alpha:0.8)), // Icon dirubah nuansa Cloud
+                                          decoration: BoxDecoration(color: catColor.withValues(alpha: 0.3), shape: BoxShape.circle),
+                                          child: Icon(log.id != null ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined, color: catColor.withValues(alpha: 0.8)),
                                         ),
                                         title: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(color: catColor, borderRadius: BorderRadius.circular(10)),
-                                              child: Text(log.category, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                  decoration: BoxDecoration(color: catColor, borderRadius: BorderRadius.circular(10)),
+                                                  child: Text(log.category, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Icon(log.isPublic ? Icons.public : Icons.lock_outline, size: 14, color: log.isPublic ? Colors.green : Colors.grey),
+                                              ],
                                             ),
                                             const SizedBox(height: 5),
                                             Text(log.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                           ],
                                         ),
-                                        subtitle: Padding(
-                                          padding: const EdgeInsets.only(top: 4.0),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(log.date)), // Sesuai instruksi Homework
-                                                style: const TextStyle(fontSize: 11, color: Colors.blueGrey, fontWeight: FontWeight.w600),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(log.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
-                                            ],
-                                          ),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text("Oleh: ${log.authorId}", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _pinkColor)),
+                                            Text(DateFormat('dd MMM yyyy, HH:mm').format(DateTime.parse(log.date)), style: const TextStyle(fontSize: 10)),
+                                            Text(log.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                          ],
                                         ),
-                                        trailing: IconButton(
-                                          icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
-                                          onPressed: () {
-                                            int realIndex = _controller.logsNotifier.value.indexOf(log);
-                                            if(realIndex != -1) {
-                                              _showEditLogDialog(realIndex, log); 
-                                            }
-                                          }
-                                        ),
+                                        trailing: canEdit
+                                            ? IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent), onPressed: () => _goToEditor(log: log, index: index))
+                                            : const SizedBox.shrink(),
                                       ),
                                     ),
                                   );

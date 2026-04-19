@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'login_controller.dart';
 import 'package:logbook_app_068/features/logbook/log_view.dart';
@@ -16,7 +17,40 @@ class _LoginViewState extends State<LoginView> {
 
   bool _isObscured = true;
 
+  bool _isLocked = false;
+  int _countdown = 10;
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _userController.dispose();
+    _passController.dispose();
+    super.dispose();
+  }
+
+  void _startLockout() {
+    setState(() {
+      _isLocked = true;
+      _countdown = 10;
+    });
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_countdown > 1) {
+          _countdown--;
+        } else {
+          _isLocked = false;
+          _controller.failedAttempts = 0; 
+          timer.cancel();
+        }
+      });
+    });
+  }
+
   void _handleLogin() {
+    if (_isLocked) return;
+
     String user = _userController.text;
     String pass = _passController.text;
 
@@ -40,12 +74,22 @@ class _LoginViewState extends State<LoginView> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Username atau Password Salah!"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (_controller.failedAttempts >= 3) {
+        _startLockout();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Terlalu banyak percobaan. Silakan tunggu 10 detik."),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Username atau Password Salah! (Percobaan ${_controller.failedAttempts}/3)"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -82,11 +126,12 @@ class _LoginViewState extends State<LoginView> {
               // Input Username
               TextField(
                 controller: _userController,
+                enabled: !_isLocked, // Mematikan input (readonly) jika sedang terkunci
                 decoration: InputDecoration(
                   labelText: "Username",
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: _isLocked ? Colors.grey[300] : Colors.white, // Ubah warna jadi abu jika terkunci
                   prefixIcon: const Icon(Icons.person_outline),
                 ),
               ),
@@ -96,21 +141,21 @@ class _LoginViewState extends State<LoginView> {
               TextField(
                 controller: _passController,
                 obscureText: _isObscured,
+                enabled: !_isLocked,
                 decoration: InputDecoration(
                   labelText: "Password",
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: _isLocked ? Colors.grey[300] : Colors.white,
                   prefixIcon: const Icon(Icons.lock_outline),
-                  // Tombol untuk toggle visibility password
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isObscured ? Icons.visibility_off : Icons.visibility,
                       color: Colors.grey,
                     ),
-                    onPressed: () {
+                    onPressed: _isLocked ? null : () {
                       setState(() {
-                        _isObscured = !_isObscured; // Toggle state
+                        _isObscured = !_isObscured; 
                       });
                     },
                   ),
@@ -122,13 +167,16 @@ class _LoginViewState extends State<LoginView> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8E0D2), 
-                    foregroundColor: const Color(0xFF4A4A4A),
+                    backgroundColor: _isLocked ? Colors.grey : const Color(0xFFB8E0D2), 
+                    foregroundColor: _isLocked ? Colors.white : const Color(0xFF4A4A4A),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
-                  onPressed: _handleLogin,
-                  child: const Text("Masuk", style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: _isLocked ? null : _handleLogin,
+                  child: Text(
+                    _isLocked ? "Coba lagi dalam $_countdown s" : "Masuk",
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                  ),
                 ),
               ),
             ],

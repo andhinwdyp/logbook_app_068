@@ -5,6 +5,8 @@ class LoginController {
     "Guest": "321",
   };
 
+  int failedAttempts = 0;
+
   // 2. Fungsi Login yang lebih pintar
   bool login(String username, String password) {
     // Cek apakah username dan password tidak kosong
@@ -12,11 +14,13 @@ class LoginController {
       return false; 
     }
 
-    // Cek apakah username ada dan password cocok
+    // Cek apakah username ada dan password cocok 
     if (_userData.containsKey(username) && _userData[username] == password) {
+      failedAttempts = 0; // Reset hitungan jika berhasil login
       return true;
     }
     
+    failedAttempts++; // Tambah hitungan jika gagal
     return false;
   }
 }

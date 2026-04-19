@@ -59,17 +59,20 @@ class MongoService {
     }
   }
 
-  Future<List<LogModel>> getLogs() async {
+  // [PERBAIKAN 1]: Tambahkan parameter teamId untuk memastikan hanya data milik tim yang sedang login yang diambil.
+  Future<List<LogModel>> getLogs(String teamId) async {
     try {
       final collection = await _getSafeCollection();
 
       await LogHelper.writeLog(
-        "INFO: Fetching data from Cloud...",
+        "INFO: Fetching data from Cloud untuk tim: $teamId...",
         source: _source,
         level: 3,
       );
 
-      final List<Map<String, dynamic>> data = await collection.find().toList();
+      final List<Map<String, dynamic>> data = await collection
+          .find(where.eq('teamId', teamId))
+          .toList();
       return data.map((json) => LogModel.fromMap(json)).toList();
     } catch (e) {
       await LogHelper.writeLog(
@@ -108,7 +111,7 @@ class MongoService {
         throw Exception("ID Log tidak ditemukan untuk update");
       }
 
-      await collection.replaceOne(where.id(log.id!), log.toMap());
+      await collection.replaceOne(where.id(ObjectId.fromHexString(log.id!)), log.toMap());
 
       await LogHelper.writeLog(
         "DATABASE: Update '${log.title}' Berhasil",
@@ -125,13 +128,20 @@ class MongoService {
     }
   }
 
-  Future<void> deleteLog(ObjectId id) async {
+  // [PERBAIKAN 2]: Ubah parameter dari ObjectId ke String untuk memudahkan pemanggilan dari UI.
+  Future<void> deleteLog(String idString) async {
     try {
+      if (idString.length != 24) {
+        throw Exception("Format ID tidak valid");
+      }
+      
+      final objectId = ObjectId.fromHexString(idString);
       final collection = await _getSafeCollection();
-      await collection.remove(where.id(id));
+      
+      await collection.deleteOne(where.id(objectId));
 
       await LogHelper.writeLog(
-        "DATABASE: Hapus ID $id Berhasil",
+        "DATABASE: Hapus ID $idString Berhasil",
         source: _source,
         level: 2,
       );
